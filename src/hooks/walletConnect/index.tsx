@@ -48,7 +48,8 @@ const WalletConnectProvider = ({ children }: any) => {
         address: WASM_PRECOMPILE_ADDRESS,
         client: walletClient,
       });
-      setWallet({ address: accounts[0], contract, publicClient });
+      // const test = await contract.write.execute
+      setWallet({ address: accounts[0], contract, publicClient, walletClient });
       closeWalletConnect();
     } else {
       const wallet = await connect(connector, config.network);

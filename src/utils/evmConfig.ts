@@ -1,10 +1,11 @@
-import { defineChain } from "viem";
+import { PublicClient, WalletClient, defineChain } from "viem";
 import { http, createConfig } from "wagmi";
 
 export interface EvmWalletConnect {
   contract: any;
-  publicClient: any;
-  address: string;
+  publicClient: PublicClient;
+  walletClient: WalletClient;
+  address: `0x${string}`;
 }
 
 export const seiDevnet = defineChain({

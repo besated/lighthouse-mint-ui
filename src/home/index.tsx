@@ -4,7 +4,11 @@ import { useWalletConnect } from "hooks/walletConnect";
 import config from "config.json";
 import { Bg } from "styles/bg";
 import Wallet, { DropdownItem } from "components/wallet";
-import { getSigningCosmWasmClient, getStargateClient } from "@sei-js/core";
+import {
+  getCosmWasmClient,
+  getSigningCosmWasmClient,
+  getStargateClient,
+} from "@sei-js/core";
 import { SigningCosmWasmClient } from "@cosmjs/cosmwasm-stargate";
 import { FontAwesomeIcon } from "@fortawesome/react-fontawesome";
 import { faDiscord, faTwitter } from "@fortawesome/free-brands-svg-icons";
@@ -12,13 +16,14 @@ import { faCircleNotch, faGlobe } from "@fortawesome/free-solid-svg-icons";
 import BigNumber from "bignumber.js";
 import { Timer } from "components/timer";
 import { GasPrice } from "@cosmjs/stargate";
-import { keccak_256 } from "@noble/hashes/sha3";
-import { MerkleTree } from "merkletreejs";
 import { toast } from "react-hot-toast";
 import MintedModal from "components/mintedModal";
 import axios from "axios";
 import { isEvmWallet } from "utils/helpers";
-import { formatEther } from "viem";
+import { formatEther, hashMessage, recoverPublicKey, toHex } from "viem";
+import { fromHex, toBech32 } from "@cosmjs/encoding";
+import { rawSecp256k1PubkeyToRawAddress } from "@cosmjs/amino";
+import { Secp256k1 } from "@cosmjs/crypto";
 
 const LIGHTHOUSE_CONTRACT_ARCTIC_1 =
   "sei1x22q8lfhz7qcvtzs0dakhgx2th64l79kepjujhhxk5x804taeqlqa9e93f";
@@ -268,6 +273,135 @@ const Home = () => {
     } catch (e) {}
   };
 
+  const getMintInstructions = (lighthouseConfig: any, recipient: string) => {
+    const instruction: any = {
+      contractAddress: getLighthouseContract(config.network),
+      msg: {
+        mint_native: {
+          collection: config.collection_address,
+          group: currentPhase.name,
+          recipient,
+        },
+      },
+    };
+
+    if (currentPhase.unit_price != 0) {
+      instruction.funds = [
+        {
+          denom: "usei",
+          amount: new BigNumber(currentPhase.unit_price)
+            .plus(new BigNumber(lighthouseConfig.fee))
+            .toString(),
+        },
+      ];
+    }
+
+    let instructions = [];
+    for (let i = 0; i < amount; i++) {
+      instructions.push(instruction);
+    }
+    return instructions;
+  };
+
+  const handleEvmMint = async (lighthouseConfig: any): Promise<string[]> => {
+    if (!wallet || !isEvmWallet(wallet)) {
+      return [];
+    }
+
+    let seiAddress = "";
+    try {
+      seiAddress = await wallet.publicClient.request({
+        method: "sei_getSeiAddress" as any,
+        params: [wallet.address],
+      });
+    } catch (e) {
+      console.log("Error fetching address", e);
+    }
+
+    if (!seiAddress) {
+      const message = "Get pubkey";
+      const signature = await wallet.walletClient.signMessage({
+        account: wallet.address,
+        message: message,
+      });
+      const pubKey = await recoverPublicKey({
+        hash: hashMessage(message),
+        signature,
+      });
+      const compressedPubKey = Secp256k1.compressPubkey(
+        fromHex(pubKey.substring(2))
+      );
+      seiAddress = toBech32(
+        "sei",
+        rawSecp256k1PubkeyToRawAddress(compressedPubKey)
+      );
+    }
+    console.log(seiAddress);
+    const instructions = getMintInstructions(lighthouseConfig, seiAddress);
+    if (instructions.length > 1) {
+      console.log("more than 1 mint");
+      return [];
+    }
+    const instruction = instructions[0];
+    const txHash = await wallet.contract.write.execute([
+      instruction.contractAddress,
+      toHex(JSON.stringify(instruction.msg)),
+      toHex(JSON.stringify(instruction.funds)),
+    ]);
+    const tx = await wallet.publicClient.waitForTransactionReceipt({
+      hash: txHash,
+    });
+    console.log(tx);
+
+    // We don't get logs from the EVM tx, so will have to get minted tokens from the contract itself
+    const client = await getCosmWasmClient(config.rpc);
+    const { tokens } = await client.queryContractSmart(
+      config.collection_address,
+      { tokens: { owner: seiAddress } }
+    );
+    return tokens;
+  };
+
+  const handleWasmMint = async (lighthouseConfig: any): Promise<string[]> => {
+    if (!wallet || isEvmWallet(wallet)) {
+      return [];
+    }
+
+    const seiAddress = wallet.accounts[0].address;
+    const instructions = getMintInstructions(lighthouseConfig, seiAddress);
+    const signingClient = await getSigningCosmWasmClient(
+      config.rpc,
+      wallet.offlineSigner,
+      {
+        gasPrice: GasPrice.fromString("0.01usei"),
+      }
+    );
+
+    const mintReceipt = await signingClient.executeMultiple(
+      wallet!.accounts[0].address,
+      instructions,
+      "auto"
+    );
+
+    const tokenIds: string[] = [];
+    const logs = mintReceipt.logs;
+    for (const log of logs) {
+      const events = log.events;
+      for (const event of events) {
+        if (event.type === "wasm") {
+          // Find the attribute with the key 'collection'
+          for (const attribute of event.attributes) {
+            if (attribute.key === "token_id") {
+              tokenIds.push(attribute.value);
+              break;
+            }
+          }
+        }
+      }
+    }
+    return tokenIds;
+  };
+
   const mint = async () => {
     if (wallet === null) return openWalletConnect();
 
@@ -301,113 +435,27 @@ const Home = () => {
       return;
     }
 
-    if (isEvmWallet(wallet)) {
-      console.log("handle this differently");
-      return;
-    }
-
     //load client
-    const client = await getSigningCosmWasmClient(
-      config.rpc,
-      wallet.offlineSigner,
-      {
-        gasPrice: GasPrice.fromString("0.01usei"),
-      }
-    );
+    const client = await getCosmWasmClient(config.rpc);
 
     let lighthouseConfig = await client.queryContractSmart(
       getLighthouseContract(config.network),
       { get_config: {} }
     );
 
-    //check if wallet have enough balance
-    if (
-      currentPhase.unit_price > 0 &&
-      new BigNumber(currentPhase.unit_price)
-        .div(1e6)
-        .plus(new BigNumber(lighthouseConfig.fee).div(1e6))
-        .times(amount)
-        .gt(new BigNumber(balance))
-    ) {
-      toast.error("Insufficient balance");
-      return;
-    }
-
-    let merkleProof: any = null;
-    let hashedAddress: any = null;
-
-    if (currentPhase.merkle_root !== "" && currentPhase.merkle_root !== null) {
-      let hashedWallets = currentPhase.allowlist.map(keccak_256);
-      const tree = new MerkleTree(hashedWallets, keccak_256, {
-        sortPairs: true,
-      });
-      merkleProof = tree
-        .getProof(Buffer.from(keccak_256(wallet!.accounts[0].address)))
-        .map((element) => Array.from(element.data));
-      hashedAddress = Array.from(
-        Buffer.from(keccak_256(wallet!.accounts[0].address))
-      );
-    }
-
-    const instruction: any = {
-      contractAddress: getLighthouseContract(config.network),
-      msg: {
-        mint_native: {
-          collection: config.collection_address,
-          group: currentPhase.name,
-          recipient: wallet!.accounts[0].address,
-          merkle_proof: merkleProof,
-          hashed_address: hashedAddress,
-        },
-      },
-    };
-
-    if (currentPhase.unit_price != 0) {
-      instruction.funds = [
-        {
-          denom: "usei",
-          amount: new BigNumber(currentPhase.unit_price)
-            .plus(new BigNumber(lighthouseConfig.fee))
-            .toString(),
-        },
-      ];
-    }
-
-    let instructions = [];
-
-    for (let i = 0; i < amount; i++) {
-      instructions.push(instruction);
-    }
-
-    let loading = toast.loading("Minting...");
+    const loading = toast.loading("Minting...");
     try {
-      const mintReceipt = await client.executeMultiple(
-        wallet!.accounts[0].address,
-        instructions,
-        "auto"
-      );
+      let tokenIds: string[] = [];
+      if (isEvmWallet(wallet)) {
+        tokenIds = await handleEvmMint(lighthouseConfig);
+      } else {
+        tokenIds = await handleWasmMint(lighthouseConfig);
+      }
+      if (!tokenIds.length) {
+        throw new Error("Mint failed");
+      }
       toast.dismiss(loading);
       toast.success("Minted successfully");
-
-      //console.log(mintReceipt)
-
-      let tokenIds: any[] = [];
-
-      const logs = mintReceipt.logs;
-      for (const log of logs) {
-        const events = log.events;
-        for (const event of events) {
-          if (event.type === "wasm") {
-            // Find the attribute with the key 'collection'
-            for (const attribute of event.attributes) {
-              if (attribute.key === "token_id") {
-                tokenIds.push(attribute.value);
-                break;
-              }
-            }
-          }
-        }
-      }
 
       refresh();
 
