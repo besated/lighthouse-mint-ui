@@ -57,14 +57,12 @@ const Home = () => {
   const [collection, setCollection] = useState<any>(null);
   const [phases, setPhases] = useState<any[]>([]);
   const [currentPhase, setCurrentPhase] = useState<any>(null);
-  const [walletWhitelisted, setWalletWhitelisted] = useState(true);
 
   const [amount, setAmount] = useState(1);
   const amountInput = useRef<any>(null);
 
   const [showMintedModal, setShowMintedModal] = useState(false);
   const [mintedInfo, setMintedInfo] = useState<any>({});
-  const [showMintedNfts, setShowMintedNfts] = useState(false);
   const [balance, setBalance] = useState("");
 
   useEffect(() => {
@@ -580,7 +578,7 @@ const Home = () => {
             </Wallet>
           )}
         </C.Header>
-        <C.Launch showMintedNfts={showMintedNfts ? "true" : "false"}>
+        <C.Launch>
           {loading && (
             <C.Loading>
               <FontAwesomeIcon icon={faCircleNotch} spin />
@@ -590,178 +588,160 @@ const Home = () => {
           {!loading && (
             <>
               <C.LaunchBg></C.LaunchBg>
-              {!showMintedNfts && (
-                <>
-                  <C.LaunchInfo>
-                    <C.Title>{config.name}</C.Title>
-                    <C.TotalMinted>
-                      <C.TotalMintedInfo>
-                        <C.TotalMintedTitle>TOTAL MINTED</C.TotalMintedTitle>
-                        <C.TotalMintedValue>
-                          {Math.floor(
-                            (collection.mintedSupply / collection.supply) *
-                              100 *
-                              100
-                          ) / 100}
-                          %{" "}
-                          <span>
-                            {collection.mintedSupply}/{collection.supply}
-                          </span>
-                        </C.TotalMintedValue>
-                      </C.TotalMintedInfo>
-                      <C.TotalMintedProgress
-                        value={
-                          Math.floor(
-                            (collection.mintedSupply / collection.supply) *
-                              100 *
-                              100
-                          ) / 100
-                        }
-                      ></C.TotalMintedProgress>
-                    </C.TotalMinted>
+              <C.LaunchInfo>
+                <C.Title>{config.name}</C.Title>
+                <C.TotalMinted>
+                  <C.TotalMintedInfo>
+                    <C.TotalMintedTitle>TOTAL MINTED</C.TotalMintedTitle>
+                    <C.TotalMintedValue>
+                      {Math.floor(
+                        (collection.mintedSupply / collection.supply) *
+                          100 *
+                          100
+                      ) / 100}
+                      %{" "}
+                      <span>
+                        {collection.mintedSupply}/{collection.supply}
+                      </span>
+                    </C.TotalMintedValue>
+                  </C.TotalMintedInfo>
+                  <C.TotalMintedProgress
+                    value={
+                      Math.floor(
+                        (collection.mintedSupply / collection.supply) *
+                          100 *
+                          100
+                      ) / 100
+                    }
+                  ></C.TotalMintedProgress>
+                </C.TotalMinted>
 
-                    <C.Description>{config.description}</C.Description>
+                <C.Description>{config.description}</C.Description>
 
-                    {(config.website || config.twitter || config.discord) && (
-                      <C.Links>
-                        {config.website && (
-                          <C.Link
-                            href={config.website}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <FontAwesomeIcon icon={faGlobe} />
-                          </C.Link>
-                        )}
-                        {config.twitter && (
-                          <C.Link
-                            href={config.twitter}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <FontAwesomeIcon icon={faTwitter} />
-                          </C.Link>
-                        )}
-                        {config.discord && (
-                          <C.Link
-                            href={config.discord}
-                            target="_blank"
-                            rel="noreferrer"
-                          >
-                            <FontAwesomeIcon icon={faDiscord} />
-                          </C.Link>
-                        )}
-                      </C.Links>
+                {(config.website || config.twitter || config.discord) && (
+                  <C.Links>
+                    {config.website && (
+                      <C.Link
+                        href={config.website}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <FontAwesomeIcon icon={faGlobe} />
+                      </C.Link>
                     )}
+                    {config.twitter && (
+                      <C.Link
+                        href={config.twitter}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <FontAwesomeIcon icon={faTwitter} />
+                      </C.Link>
+                    )}
+                    {config.discord && (
+                      <C.Link
+                        href={config.discord}
+                        target="_blank"
+                        rel="noreferrer"
+                      >
+                        <FontAwesomeIcon icon={faDiscord} />
+                      </C.Link>
+                    )}
+                  </C.Links>
+                )}
 
-                    <C.Phases>
-                      {phases.map((phase, index) => (
-                        <C.Phase
-                          key={index}
-                          active={
-                            currentPhase.name === phase.name ? "true" : "false"
-                          }
-                          switch={
-                            !(
-                              !phase.noend &&
-                              new Date(phase.end_time) < new Date()
-                            )
-                              ? "true"
-                              : "false"
-                          }
-                          onClick={() => switchPhase(phase)}
-                        >
-                          <C.PhaseTop>
-                            <C.PhaseTitle>{phase.name}</C.PhaseTitle>
-                            {!phase.noend && (
-                              <>
-                                {new Date(phase.start_time) < new Date() &&
-                                  new Date(phase.end_time) > new Date() && (
-                                    <C.PhaseDate>
-                                      <span>Ends In</span>{" "}
-                                      <Timer date={phase.end_time} />
-                                    </C.PhaseDate>
-                                  )}
-                              </>
-                            )}
-                            {new Date(phase.start_time) > new Date() && (
-                              <C.PhaseDate>
-                                <span>Starts In</span>{" "}
-                                <Timer date={phase.start_time} />
-                              </C.PhaseDate>
-                            )}
-                          </C.PhaseTop>
-                          <C.PhaseBottom>
-                            {phase.max_tokens > 0
-                              ? phase.max_tokens + " Per Wallet •"
-                              : ""}{" "}
-                            {new BigNumber(phase.unit_price)
-                              .div(1e6)
-                              .toString()}{" "}
-                            SEI
-                          </C.PhaseBottom>
-                          {!phase.noend &&
-                            new Date(phase.end_time) < new Date() && (
-                              <C.PhaseBadge>Ended</C.PhaseBadge>
-                            )}
-                        </C.Phase>
-                      ))}
-                    </C.Phases>
-                  </C.LaunchInfo>
-                  <C.Mid></C.Mid>
-                  <C.LaunchMint>
-                    <C.TitleMobile>{config.name}</C.TitleMobile>
-                    <C.Image>
-                      <img src="/images/launch.png" alt="launch" />
-                    </C.Image>
-                    <C.MintInfo>
-                      <C.Price>
-                        Price:{" "}
-                        <span>
-                          {new BigNumber(currentPhase.unit_price)
-                            .div(1e6)
-                            .times(amount)
-                            .toString()}{" "}
-                          SEI
-                        </span>
-                      </C.Price>
-                      <C.Amount>
-                        <C.AmountButton onClick={decrementAmount}>
-                          &minus;
-                        </C.AmountButton>
-                        <C.AmountValue
-                          ref={amountInput}
-                          type="number"
-                          step="1"
-                          min={1}
-                          defaultValue={1}
-                          onChange={onAmountChange}
-                        />
-                        <C.AmountButton onClick={incrementAmount}>
-                          &#43;
-                        </C.AmountButton>
-                      </C.Amount>
-                    </C.MintInfo>
-                    <C.MintButton
-                      onClick={mint}
-                      disabled={
-                        walletWhitelisted === false ||
-                        collection.supply - collection.mintedSupply <= 0
+                <C.Phases>
+                  {phases.map((phase, index) => (
+                    <C.Phase
+                      key={index}
+                      active={
+                        currentPhase.name === phase.name ? "true" : "false"
                       }
+                      switch={
+                        !(!phase.noend && new Date(phase.end_time) < new Date())
+                          ? "true"
+                          : "false"
+                      }
+                      onClick={() => switchPhase(phase)}
                     >
-                      {collection.supply - collection.mintedSupply <= 0 ? (
-                        <>Sold Out!</>
-                      ) : (
-                        <>
-                          {walletWhitelisted === true
-                            ? "Mint"
-                            : "Not Whitelisted"}
-                        </>
-                      )}
-                    </C.MintButton>
-                  </C.LaunchMint>
-                </>
-              )}
+                      <C.PhaseTop>
+                        <C.PhaseTitle>{phase.name}</C.PhaseTitle>
+                        {!phase.noend && (
+                          <>
+                            {new Date(phase.start_time) < new Date() &&
+                              new Date(phase.end_time) > new Date() && (
+                                <C.PhaseDate>
+                                  <span>Ends In</span>{" "}
+                                  <Timer date={phase.end_time} />
+                                </C.PhaseDate>
+                              )}
+                          </>
+                        )}
+                        {new Date(phase.start_time) > new Date() && (
+                          <C.PhaseDate>
+                            <span>Starts In</span>{" "}
+                            <Timer date={phase.start_time} />
+                          </C.PhaseDate>
+                        )}
+                      </C.PhaseTop>
+                      <C.PhaseBottom>
+                        {phase.max_tokens > 0
+                          ? phase.max_tokens + " Per Wallet •"
+                          : ""}{" "}
+                        {new BigNumber(phase.unit_price).div(1e6).toString()}{" "}
+                        SEI
+                      </C.PhaseBottom>
+                      {!phase.noend &&
+                        new Date(phase.end_time) < new Date() && (
+                          <C.PhaseBadge>Ended</C.PhaseBadge>
+                        )}
+                    </C.Phase>
+                  ))}
+                </C.Phases>
+              </C.LaunchInfo>
+              <C.Mid></C.Mid>
+              <C.LaunchMint>
+                <C.TitleMobile>{config.name}</C.TitleMobile>
+                <C.Image>
+                  <img src="/images/launch.png" alt="launch" />
+                </C.Image>
+                <C.MintInfo>
+                  <C.Price>
+                    Price:{" "}
+                    <span>
+                      {new BigNumber(currentPhase.unit_price)
+                        .div(1e6)
+                        .times(amount)
+                        .toString()}{" "}
+                      SEI
+                    </span>
+                  </C.Price>
+                  <C.Amount>
+                    <C.AmountButton onClick={decrementAmount}>
+                      &minus;
+                    </C.AmountButton>
+                    <C.AmountValue
+                      ref={amountInput}
+                      type="number"
+                      step="1"
+                      min={1}
+                      defaultValue={1}
+                      onChange={onAmountChange}
+                    />
+                    <C.AmountButton onClick={incrementAmount}>
+                      &#43;
+                    </C.AmountButton>
+                  </C.Amount>
+                </C.MintInfo>
+                <C.MintButton
+                  onClick={mint}
+                  disabled={collection.supply - collection.mintedSupply <= 0}
+                >
+                  {collection.supply - collection.mintedSupply <= 0
+                    ? "Sold Out!"
+                    : "Mint"}
+                </C.MintButton>
+              </C.LaunchMint>
             </>
           )}
         </C.Launch>
