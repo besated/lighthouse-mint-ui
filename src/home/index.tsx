@@ -19,7 +19,7 @@ import { GasPrice } from "@cosmjs/stargate";
 import { toast } from "react-hot-toast";
 import MintedModal from "components/mintedModal";
 import axios from "axios";
-import { isEvmWallet } from "utils/helpers";
+import { isEvmWallet, shortenPublicKey } from "utils/helpers";
 import { formatEther, hashMessage, recoverPublicKey, toHex } from "viem";
 import { fromHex, toBech32 } from "@cosmjs/encoding";
 import { rawSecp256k1PubkeyToRawAddress } from "@cosmjs/amino";
@@ -746,6 +746,23 @@ const Home = () => {
             </>
           )}
         </C.Launch>
+        <C.CollectionAddresses>
+          <div>Collection Addresses:</div>
+          <C.CollectionAddress
+            href={`https://seistream.app/account/${config.collection_address}`}
+            target="_blank"
+            rel="noopener"
+          >
+            {shortenPublicKey(config.collection_address)}
+          </C.CollectionAddress>
+          <C.CollectionAddress
+            href={`https://seitrace.com/address/${config.evm_collection_address}`}
+            target="_blank"
+            rel="noopener"
+          >
+            {shortenPublicKey(config.evm_collection_address)}
+          </C.CollectionAddress>
+        </C.CollectionAddresses>
       </C.Container>
 
       {showMintedModal && (
