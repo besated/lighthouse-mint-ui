@@ -282,8 +282,7 @@ const Home = () => {
         },
       },
     };
-
-    if (currentPhase.unit_price != 0) {
+    if (currentPhase.unit_price !== "0" || currentPhase.unit_price !== 0) {
       instruction.funds = [
         {
           denom: "usei",
@@ -336,10 +335,6 @@ const Home = () => {
     }
     console.log(seiAddress);
     const instructions = getMintInstructions(lighthouseConfig, seiAddress);
-    if (instructions.length > 1) {
-      console.log("more than 1 mint");
-      return [];
-    }
     const instruction = instructions[0];
     const txHash = await wallet.contract.write.execute([
       instruction.contractAddress,
@@ -357,7 +352,7 @@ const Home = () => {
       config.collection_address,
       { tokens: { owner: seiAddress } }
     );
-    return tokens;
+    return tokens.slice(-amount);
   };
 
   const handleWasmMint = async (lighthouseConfig: any): Promise<string[]> => {
@@ -430,6 +425,12 @@ const Home = () => {
     //check if current phase has ended
     if (!currentPhase.noend && new Date(currentPhase.end_time) < new Date()) {
       toast.error("This phase has ended");
+      return;
+    }
+
+    // TODO: Can we mint more than one?
+    if (amount > 1) {
+      toast.error("Can't mint more than one");
       return;
     }
 
