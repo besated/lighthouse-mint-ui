@@ -1,13 +1,13 @@
 {
-  "name": "Sei Orcas",
+  "name": "Sei Penguinz",
   "description": "Lorem ipsum dolor sit amet, consectetur adipiscing elit. Sed euismod, urna eu aliquet ultricies, urna elit aliquam nunc, quis aliquet nunc nisl quis nisl.",
-  "website": "https://www.seinetwork.io/",
+  "website": "https://www.sei.io/",
   "twitter": "",
   "discord": "",
   "rpc": "https://rpc-arctic-1.sei-apis.com/",
   "network": "arctic-1",
-  "collection_address": "sei1qyygux5t4s3a3l25k8psxjydhtudu5lnt0tk0szm8q4s27xa980sfrsgjn",
-  "evm_collection_address": "0x55bf6491642202c6424c58cf57ea5f82fce47328",
+  "collection_address": "sei1zq65pq76smcpd0q7kgq6k6jd5avagk7ggzyzwyj5yme3cq6lq42sv2w5jr",
+  "evm_collection_address": "0x1769F0d51cfb66f6050a584106448fbc20E63AF1",
   "nft_name_type": "default",
   "groups": [
     {

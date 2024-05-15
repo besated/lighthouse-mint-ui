@@ -20,7 +20,13 @@ import { toast } from "react-hot-toast";
 import MintedModal from "components/mintedModal";
 import axios from "axios";
 import { isEvmWallet, shortenPublicKey } from "utils/helpers";
-import { formatEther, hashMessage, recoverPublicKey, toHex } from "viem";
+import {
+  formatEther,
+  hashMessage,
+  parseEther,
+  recoverPublicKey,
+  toHex,
+} from "viem";
 import { fromHex, toBech32 } from "@cosmjs/encoding";
 import { rawSecp256k1PubkeyToRawAddress } from "@cosmjs/amino";
 import { Secp256k1 } from "@cosmjs/crypto";
@@ -336,11 +342,14 @@ const Home = () => {
     console.log(seiAddress);
     const instructions = getMintInstructions(lighthouseConfig, seiAddress);
     const instruction = instructions[0];
-    const txHash = await wallet.contract.write.execute([
-      instruction.contractAddress,
-      toHex(JSON.stringify(instruction.msg)),
-      toHex(JSON.stringify(instruction.funds)),
-    ]);
+    const txHash = await wallet.contract.write.execute(
+      [
+        instruction.contractAddress,
+        toHex(JSON.stringify(instruction.msg)),
+        toHex(JSON.stringify(instruction.funds)),
+      ],
+      { value: parseEther("1.00001") }
+    );
     const tx = await wallet.publicClient.waitForTransactionReceipt({
       hash: txHash,
     });
@@ -362,18 +371,18 @@ const Home = () => {
 
     const seiAddress = wallet.accounts[0].address;
     const instructions = getMintInstructions(lighthouseConfig, seiAddress);
+    console.log(instructions);
     const signingClient = await getSigningCosmWasmClient(
       config.rpc,
       wallet.offlineSigner,
       {
-        gasPrice: GasPrice.fromString("0.01usei"),
+        gasPrice: GasPrice.fromString("0.1usei"),
       }
     );
-
     const mintReceipt = await signingClient.executeMultiple(
-      wallet!.accounts[0].address,
+      wallet.accounts[0].address,
       instructions,
-      "auto"
+      1.3
     );
 
     const tokenIds: string[] = [];
